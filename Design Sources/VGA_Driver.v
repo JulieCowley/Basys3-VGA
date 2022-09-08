@@ -33,12 +33,15 @@ module VGA_Driver
     localparam ACTIVE_COLS = 640;
     localparam ACTIVE_ROWS = 480;
     
+    //some parameters for sync pulse offsets
     localparam H_SYNC_START = 18;   
     localparam H_SYNC_END = 18 + 92;
-    localparam H_ACTIVE = 18 + 92 + 50;
-    localparam V_ACTIVE_END = ACTIVE_ROWS;
     localparam V_SYNC_START = ACTIVE_ROWS + 10;
     localparam V_SYNC_END = ACTIVE_ROWS + 10 + 2;
+    
+    //used to check if display is in active drawing region
+    localparam H_ACTIVE_START = 18 + 92 + 50;
+    localparam V_ACTIVE_END = ACTIVE_ROWS;
     
     reg [9:0] h_count = 0; // horizontal position
     reg [8:0] v_count = 0; // vertical position
@@ -64,15 +67,17 @@ module VGA_Driver
             h_count <= h_count +1;
     end
     
-    //generate the Sync Pulses
+    //generate the Sync Pulses (Active low so invert signal)
     assign HSync = ~((h_count >= H_SYNC_START) & (h_count < H_SYNC_END));
     assign VSync = ~((v_count >= V_SYNC_START) & (v_count < V_SYNC_END));
     
-    // keep x and y bound within the blanking period
-    assign x = (h_count < H_ACTIVE) ? 0 : (h_count - H_ACTIVE);
+    // keep x and y bound within the active region
+    assign x = (h_count < H_ACTIVE_START) ? 0 : (h_count - H_ACTIVE_START);
     assign y = (v_count >= V_ACTIVE_END) ? (V_ACTIVE_END - 1) : (v_count);
     
-    assign blanking = ((h_count < H_ACTIVE) | (v_count > V_ACTIVE_END - 1));
+    // useful signal for other modules
+    // can't draw while vga display is blanking
+    assign blanking = ((h_count < H_ACTIVE_START) | (v_count > V_ACTIVE_END - 1));
     
  
 endmodule
